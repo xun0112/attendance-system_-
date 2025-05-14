@@ -1,0 +1,725 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>市立新北高工 113-2 資訊科乙班留校點名</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #4b5563;
+      margin: 0;
+    }
+.container {
+  max-width: 1000px;  /* 增加寬度以符合用戶反饋 */
+  margin: 0 auto;
+  padding: 1rem;
+  padding-bottom: 2rem;
+}
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+      animation: fadeIn 0.5s ease-in;
+    }
+.attendance {
+  font-size: 24px;  /* 增加表情符號大小 */
+  transition: transform 0.2s, color 0.3s;
+  cursor: pointer;
+  display: inline-block;
+}
+    .attendance:hover {
+      transform: scale(1.2);
+    }
+    .table-container {
+      overflow-x: auto;
+    }
+table {
+  width: 90%;  /* 設定為正常寬度 */
+  margin: 0 auto;  /* 居中對齊 */
+  table-layout: auto; /* 改為 auto，讓格子根據內容自適應 */
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+th, td {
+  border: 1px solid #e5e7eb;
+  padding: 2px;
+  line-height: 1.2;
+  text-align: center;
+  font-size: 25px;  /* 再次增加字體大小 */
+  font-weight: bold;  /* 保持字體加粗 */
+}
+    th {
+      background: #eff6ff;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .table-row:hover {
+      background: #f1f5f9;
+    }
+    .btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      color: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: inline-block;
+      text-decoration: none;
+    }
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .btn:active {
+      transform: scale(0.95);
+    }
+    @media (max-width: 640px) {
+      body { font-size: 10px; }
+      th, td { padding: 2px; }
+      .attendance { font-size: 14px; }
+      h1 { font-size: 1.25rem; }
+      h2 { font-size: 1rem; }
+      .btn { padding: 4px 8px; font-size: 10px; }
+      .card { padding: 0.75rem; }
+      .watermark { font-size: 14px; }
+      .capture-watermark { font-size: 14px; }
+      .capture-summary { font-size: 12px; }
+      .capture-timestamp { font-size: 12px; }
+    }
+    @media print {
+      .no-print { display: none; }
+      table { font-size: 8px; }
+    }
+    .absent-red { color: #dc2626; font-size: 18px; }
+    .watermark {
+      position: fixed;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-style: italic;
+      font-weight: 500;
+      color: #1e3a8a;
+      opacity: 1.0;
+      text-align: center;
+      white-space: nowrap;
+      z-index: 1000;
+    }
+    .capture-wrapper {
+      position: relative;
+      display: inline-block;
+      padding-bottom: 100px;
+      min-height: 300px;
+      background: #ffffff;
+      width: 100%;
+      text-align: center;
+    }
+    .capture-container {
+      padding: 20px;
+      padding-bottom: 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      display: inline-block;
+      text-align: center;
+    }
+.capture-title {
+  font-size: 25px;  /* 調整為用戶指定的尺寸 */
+  font-weight: 600;
+  color: #1e40af;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.capture-timestamp {
+  font-size: 25px;  /* 調整為一致的大小 */
+  font-weight: 500;
+  color: #1e40af;
+  text-align: center;
+  margin-bottom: 16px;
+}
+    .capture-table {
+      margin-bottom: 20px;
+    }
+.capture-table th, .capture-table td {
+  border: 1px solid #e5e7eb;
+  padding: 6px;
+  line-height: 1.5;
+  text-align: center;
+  font-size: 25px;  /* 調整為用戶指定的尺寸 */
+}
+    .capture-table th {
+      background: #eff6ff;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .capture-table .text-green-500 { color: #22c55e; font-size: 18px; }
+.capture-summary {
+  font-size: 25px;  /* 調整為一致的大小 */
+  font-weight: 500;
+  color: #1e40af;
+  text-align: center;
+  margin-top: 12px;
+  margin-bottom: 20px;
+}
+    .capture-watermark {
+      position: relative;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-style: italic;
+      font-weight: 500;
+      color: #1e3a8a;
+      opacity: 1.0;
+      text-align: center;
+      white-space: nowrap;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 6px 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .flex {
+      display: flex;
+    }
+    .flex-col {
+      flex-direction: column;
+    }
+    .items-center {
+      align-items: center;
+    }
+    .justify-center {
+      justify-content: center;
+    }
+    .gap-2 {
+      gap: 0.5rem;
+    }
+    .mb-3 {
+      margin-bottom: 0.75rem;
+    }
+    .text-sm {
+      font-size: 0.875rem;
+    }
+    .font-medium {
+      font-weight: 500;
+    }
+    .text-gray-600 {
+      color: #4b5563;
+    }
+    .w-32 {
+      width: 8rem;
+    }
+    .border {
+      border-width: 1px;
+    }
+    .rounded-lg {
+      border-radius: 0.5rem;
+    }
+    .p-1 {
+      padding: 0.25rem;
+    }
+    .flex-wrap {
+      flex-wrap: wrap;
+    }
+    .hidden {
+      display: none;
+    }
+    .text-lg {
+      font-size: 1.125rem;
+    }
+    .font-semibold {
+      font-weight: 600;
+    }
+    .text-blue-900 {
+      color: #1e3a8a;
+    }
+    .text-base {
+      font-size: 1rem;
+    }
+    .text-blue-800 {
+      color: #1e40af;
+    }
+    .mb-2 {
+      margin-bottom: 0.5rem;
+    }
+    .bg-blue-100 {
+      background-color: #dbeafe;
+    }
+    .px-2 {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+    .py-1 {
+      padding-top: 0.25rem;
+      padding-bottom: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1 class="text-lg font-semibold text-center text-blue-900 mb-3">市立新北高工 113-2 資訊科乙班留校點名</h1>
+      
+      <div class="flex flex-col items-center mb-3 no-print gap-2">
+        <div class="flex items-center gap-2">
+          <label for="date-picker" class="text-sm font-medium text-gray-600">點名日期：</label>
+          <input type="date" id="date-picker" class="border rounded-lg p-1 w-32 text-sm" value="2025-05-14">
+        </div>
+        <div class="flex flex-wrap justify-center gap-2">
+          <button onclick="exportCSV()" class="btn">匯出 CSV</button>
+          <button onclick="captureClassA()" class="btn">截圖乙班名單</button>
+        </div>
+        <div class="flex flex-wrap justify-center gap-2">
+          <button onclick="copyToLineClassA()" class="btn">開 LINE 乙班</button>
+        </div>
+      </div>
+      
+      <div class="mb-3 text-gray-600 text-sm text-center no-print">
+        <span>到場：<span id="present-count">0</span></span> | 
+        <span>未到：<span id="absent-count">32</span></span>  <!-- 更新為新名單數量 -->
+      </div>
+
+      <h2 class="text-base font-semibold text-blue-800 mb-2">資訊一乙</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>班級</th>
+              <th>座號</th>
+              <th>姓名</th>
+              <th>到場</th>
+            </tr>
+          </thead>
+          <tbody id="class-a-table">  <!-- 保留 id 為 class-a-table 但內容為乙班 -->
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>01</td>
+              <td>王郁淳</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>02</td>
+              <td>吳恩慈</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>03</td>
+              <td>張庭語</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>04</td>
+              <td>朱鼎豐</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>05</td>
+              <td>吳杰恩</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>06</td>
+              <td>李岳霖</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>07</td>
+              <td>林侑呈</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>08</td>
+              <td>林孟承</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>09</td>
+              <td>林宥丞</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>10</td>
+              <td>林建伍</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>11</td>
+              <td>林柏邑</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>12</td>
+              <td>林楷庭</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>13</td>
+              <td>姚定穎</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>14</td>
+              <td>紀懷森</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>15</td>
+              <td>翁睿廷</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>16</td>
+              <td>高廷杰</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>17</td>
+              <td>張凱勛</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>18</td>
+              <td>張賀翔</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>19</td>
+              <td>梁翔晉</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>20</td>
+              <td>許宸滈</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>21</td>
+              <td>陳威名</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>22</td>
+              <td>陳政宏</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>23</td>
+              <td>陳柏均</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>24</td>
+              <td>陳柏銓</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>25</td>
+              <td>童宥華</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>27</td>
+              <td>楊世呈</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>29</td>
+              <td>楊淮安</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>32</td>
+              <td>鄭翰陽</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>33</td>
+              <td>黎承霖</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>34</td>
+              <td>蕭冠威</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>35</td>
+              <td>賴昱誠</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>36</td>
+              <td>簡士懷</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>37</td>
+              <td>簡宏哲</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+            <tr class="table-row">
+              <td>資訊一乙</td>
+              <td>38</td>
+              <td>關博壬</td>
+              <td><span class="attendance" onclick="toggleAttendance(this)">⬜</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="capture-wrapper" class="hidden">
+        <div id="capture-container">
+          <h2 class="capture-title" id="capture-title"></h2>
+          <div class="capture-timestamp" id="capture-timestamp"></div>
+          <table class="w-full border-collapse capture-table">
+            <thead>
+              <tr class="bg-blue-100">
+                <th class="border px-2 py-1">班級</th>
+                <th class="border px-2 py-1">座號</th>
+                <th class="border px-2 py-1">姓名</th>
+                <th class="border px-2 py-1">到場</th>
+              </tr>
+            </thead>
+            <tbody id="capture-table"></tbody>
+          </table>
+          <div class="capture-summary" id="capture-summary"></div>
+          <div class="capture-watermark">© 2025 超星系統。採 CC BY-NC-ND 4.0 授權，禁止商業使用與改作。</div>
+        </div>
+      </div>
+
+      <div class="watermark">© 2025 超星系統。採 CC BY-NC-ND 4.0 授權，禁止商業使用與改作。</div>
+    </div>
+  </div>
+
+  <script>
+    const datePicker = document.getElementById('date-picker');
+    const classATable = document.getElementById('class-a-table');
+    const presentCount = document.getElementById('present-count');
+    const absentCount = document.getElementById('absent-count');
+
+    function initializeAttendance() {
+      const allSpans = document.querySelectorAll('.attendance');
+      allSpans.forEach(span => {
+        span.textContent = '⬜';
+        span.classList.remove('text-green-500');
+      });
+      presentCount.textContent = '0';
+      absentCount.textContent = allSpans.length;
+    }
+
+    function toggleAttendance(element) {
+      const isPresent = element.textContent === '⬜';
+      element.textContent = isPresent ? '✅' : '⬜';
+      element.classList.toggle('text-green-500', isPresent);
+      updateStats();
+    }
+
+    function updateStats() {
+      const allSpans = document.querySelectorAll('.attendance');
+      let present = 0;
+      allSpans.forEach(span => {
+        if (span.textContent === '✅') present++;
+      });
+      presentCount.textContent = present;
+      absentCount.textContent = allSpans.length - present;
+    }
+
+    function getCurrentTimestamp() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      return `生成於 ${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    function exportCSV() {
+      const date = datePicker.value;
+      if (!date) {
+        alert('請選擇點名日期！');
+        return;
+      }
+      let csv = '班級,座號,姓名,到場\n';
+      const rowsA = classATable.querySelectorAll('tr');
+      
+      rowsA.forEach(row => {
+        const cells = row.cells;
+        csv += `${cells[0].textContent},${cells[1].textContent},${cells[2].textContent},${cells[3].querySelector('.attendance').textContent === '✅' ? '✅' : '❌'}\n`;
+      });
+      
+      const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `點名_${date}_乙班.csv`;
+      link.click();
+      alert('CSV 已匯出！');
+    }
+
+    function captureClassA() {
+      const date = datePicker.value;
+      if (!date) {
+        alert('請選擇點名日期！');
+        return;
+      }
+      const captureWrapper = document.getElementById('capture-wrapper');
+      const captureContainer = document.getElementById('capture-container');
+      const captureTable = document.getElementById('capture-table');
+      const captureTitle = document.getElementById('capture-title');
+      const captureTimestamp = document.getElementById('capture-timestamp');
+      const captureSummary = document.getElementById('capture-summary');
+      captureTable.innerHTML = '';
+      captureTitle.textContent = `${date} 資訊一乙點名名單`;
+      captureTimestamp.textContent = getCurrentTimestamp();
+      
+      const rowsA = classATable.querySelectorAll('tr');
+      let present = 0;
+      rowsA.forEach(row => {
+        const student = {
+          class: row.cells[0].textContent,
+          seat: row.cells[1].textContent,
+          name: row.cells[2].textContent,
+          present: row.cells[3].querySelector('.attendance').textContent === '✅'
+        };
+        if (student.present) present++;
+        const statusClass = student.present ? 'text-green-500' : 'absent-red';
+        const statusSymbol = student.present ? '✅' : '❌';
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+          <td class="border px-2 py-1">${student.class}</td>
+          <td class="border px-2 py-1">${student.seat}</td>
+          <td class="border px-2 py-1">${student.name}</td>
+          <td class="border px-2 py-1"><span class="${statusClass}">${statusSymbol}</span></td>
+        `;
+        captureTable.appendChild(newRow);
+      });
+      
+      captureSummary.textContent = `到場：${present} 人 | 未到：${rowsA.length - present} 人`;
+      
+      captureWrapper.classList.remove('hidden');
+      html2canvas(captureWrapper, { scale: 2, backgroundColor: '#ffffff', windowWidth: document.body.scrollWidth, windowHeight: document.body.scrollHeight }).then(canvas => {
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = `點名名單_${date}_資訊一乙.png`;
+        link.click();
+        captureWrapper.classList.add('hidden');
+        alert('資訊一乙點名名單截圖已下載！');
+      });
+    }
+
+    function copyToLineClassA() {
+      const date = datePicker.value;
+      if (!date) {
+        alert('請選擇點名日期！');
+        return;
+      }
+      let text = `📋 ${date} 留校點名\n`;
+      text += `=== 資訊一乙 ===\n`;
+      const rowsA = classATable.querySelectorAll('tr');
+      
+      rowsA.forEach(row => {
+        const cells = row.cells;
+        const status = cells[3].querySelector('.attendance').textContent === '✅' ? '✅' : '❌';
+        text += `${cells[2].textContent} (${cells[1].textContent}) ${status}\n`;
+      });
+      
+      let present = 0;
+      rowsA.forEach(row => {
+        if (row.cells[3].querySelector('.attendance').textContent === '✅') present++;
+      });
+      text += `\n到場：${present} 人 | 未到：${rowsA.length - present} 人`;
+      
+      navigator.clipboard.writeText(text).then(() => {
+        alert('資訊一乙點名結果已複製！正在開啟 LINE...');
+        window.location.href = 'line://';
+      }).catch(() => {
+        alert('複製失敗，請手動複製以下內容：\n\n' + text);
+      });
+    }
+
+    initializeAttendance();
+  </script>
+</body>
+</html>
